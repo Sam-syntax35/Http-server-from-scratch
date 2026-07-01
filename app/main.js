@@ -1,6 +1,7 @@
 const net = require("net");
 const fs = require("fs");
 const pathModule = require("path");
+const zlib = require("zlib");
 
 const args = process.argv.slice(2);
 
@@ -32,24 +33,34 @@ for (const line of lines) {
       socket.end();
     }
 
+
 // GET /echo/{message}
 else if (path.startsWith("/echo/")) {
   const message = path.substring(6);
 
-  let response =
-    `HTTP/1.1 200 OK\r\n` +
-    `Content-Type: text/plain\r\n`;
+  if (acceptEncoding.includes("gzip")) {
+    const compressed = zlib.gzipSync(message);
 
- if (acceptEncoding.includes("gzip")) {
-    response += "Content-Encoding: gzip\r\n";
-}
+    const headers =
+      `HTTP/1.1 200 OK\r\n` +
+      `Content-Type: text/plain\r\n` +
+      `Content-Encoding: gzip\r\n` +
+      `Content-Length: ${compressed.length}\r\n` +
+      `\r\n`;
 
-  response +=
-    `Content-Length: ${message.length}\r\n` +
-    `\r\n` +
-    message;
+    socket.write(headers);
+    socket.write(compressed);
+  } else {
+    const headers =
+      `HTTP/1.1 200 OK\r\n` +
+      `Content-Type: text/plain\r\n` +
+      `Content-Length: ${message.length}\r\n` +
+      `\r\n`;
 
-  socket.write(response);
+    socket.write(headers);
+    socket.write(message);
+  }
+
   socket.end();
 }
 
