@@ -106,7 +106,7 @@ This project was built while completing the CodeCrafters **"Build Your Own HTTP 
 
 ---
 
-# 📌 Recruiter Highlights
+# 📌  Highlights
 
 * ✅ Built an **HTTP/1.1 server from scratch** without using Node's built-in `http` module.
 * ✅ Implemented directly on top of Node.js' **`net` module** using raw TCP sockets.
@@ -375,19 +375,6 @@ This approach provides a much deeper understanding of how web servers operate in
 
 ---
 
-# 📂 Project Structure
-
-```text
-.
-├── app
-│   └── main.js
-├── codecrafters.yml
-├── your_program.sh
-├── README.md
-└── .gitignore
-```
-
----
 
 # 🚀 Running Locally
 
