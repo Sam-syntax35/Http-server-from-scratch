@@ -40,9 +40,9 @@ else if (path.startsWith("/echo/")) {
     `HTTP/1.1 200 OK\r\n` +
     `Content-Type: text/plain\r\n`;
 
-  if (acceptEncoding === "gzip") {
-    response += `Content-Encoding: gzip\r\n`;
-  }
+ if (acceptEncoding.includes("gzip")) {
+    response += "Content-Encoding: gzip\r\n";
+}
 
   response +=
     `Content-Length: ${message.length}\r\n` +
