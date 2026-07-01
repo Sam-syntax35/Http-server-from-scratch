@@ -162,19 +162,37 @@ const server = net.createServer((socket) => {
     const lines = request.split("\r\n");
 
     let acceptEncoding = "";
+    let connectionHeader = "";
 
     for (const line of lines) {
       if (line.startsWith("Accept-Encoding:")) {
         acceptEncoding = line.split(":")[1].trim();
       }
+      if (line.startsWith("Connection:")) {
+        connectionHeader = line.split(":")[1].trim();
+      }
     }
+
+    const shouldClose = connectionHeader.toLowerCase() === "close";
+    const connectionResponseHeader = shouldClose ? `Connection: close\r\n` : "";
 
     const method = request.split(" ")[0];
     const path = request.split(" ")[1];
 
+    const finish = () => {
+      if (shouldClose) {
+        socket.end();
+      }
+    };
+
     // GET /
     if (path === "/") {
-      socket.write("HTTP/1.1 200 OK\r\n\r\n");
+      socket.write(
+        `HTTP/1.1 200 OK\r\n` +
+        connectionResponseHeader +
+        `\r\n`
+      );
+      finish();
     }
 
     // GET /echo/{message}
@@ -188,6 +206,7 @@ const server = net.createServer((socket) => {
           `HTTP/1.1 200 OK\r\n` +
           `Content-Type: text/plain\r\n` +
           `Content-Encoding: gzip\r\n` +
+          connectionResponseHeader +
           `Content-Length: ${compressed.length}\r\n` +
           `\r\n`;
 
@@ -197,12 +216,14 @@ const server = net.createServer((socket) => {
         const headers =
           `HTTP/1.1 200 OK\r\n` +
           `Content-Type: text/plain\r\n` +
+          connectionResponseHeader +
           `Content-Length: ${message.length}\r\n` +
           `\r\n`;
 
         socket.write(headers);
         socket.write(message);
       }
+      finish();
     }
 
     // GET /user-agent
@@ -219,10 +240,12 @@ const server = net.createServer((socket) => {
       socket.write(
         `HTTP/1.1 200 OK\r\n` +
         `Content-Type: text/plain\r\n` +
+        connectionResponseHeader +
         `Content-Length: ${userAgent.length}\r\n` +
         `\r\n` +
         userAgent
       );
+      finish();
     }
 
     // POST /files/{filename}
@@ -233,10 +256,11 @@ const server = net.createServer((socket) => {
 
       fs.writeFile(filePath, body, (err) => {
         if (err) {
-          socket.write("HTTP/1.1 500 Internal Server Error\r\n\r\n");
+          socket.write(`HTTP/1.1 500 Internal Server Error\r\n${connectionResponseHeader}\r\n`);
         } else {
-          socket.write("HTTP/1.1 201 Created\r\n\r\n");
+          socket.write(`HTTP/1.1 201 Created\r\n${connectionResponseHeader}\r\n`);
         }
+        finish();
       });
     }
 
@@ -247,22 +271,25 @@ const server = net.createServer((socket) => {
 
       fs.readFile(filePath, (err, fileData) => {
         if (err) {
-          socket.write("HTTP/1.1 404 Not Found\r\n\r\n");
+          socket.write(`HTTP/1.1 404 Not Found\r\n${connectionResponseHeader}\r\n`);
         } else {
           socket.write(
             `HTTP/1.1 200 OK\r\n` +
             `Content-Type: application/octet-stream\r\n` +
+            connectionResponseHeader +
             `Content-Length: ${fileData.length}\r\n` +
             `\r\n`
           );
           socket.write(fileData);
         }
+        finish();
       });
     }
 
     // Unknown route
     else {
-      socket.write("HTTP/1.1 404 Not Found\r\n\r\n");
+      socket.write(`HTTP/1.1 404 Not Found\r\n${connectionResponseHeader}\r\n`);
+      finish();
     }
   });
 });
