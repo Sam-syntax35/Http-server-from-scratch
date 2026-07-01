@@ -13,12 +13,17 @@ if (args[0] === "--directory") {
 const server = net.createServer((socket) => {
   socket.on("data", (data) => {
     const request = data.toString();
+
+    const method = request.split(" ")[0];
     const path = request.split(" ")[1];
 
+    // GET /
     if (path === "/") {
       socket.write("HTTP/1.1 200 OK\r\n\r\n");
       socket.end();
-    } 
+    }
+
+    // GET /echo/{message}
     else if (path.startsWith("/echo/")) {
       const message = path.substring(6);
 
@@ -31,7 +36,9 @@ const server = net.createServer((socket) => {
       );
 
       socket.end();
-    } 
+    }
+
+    // GET /user-agent
     else if (path === "/user-agent") {
       const lines = request.split("\r\n");
 
@@ -53,8 +60,30 @@ const server = net.createServer((socket) => {
       );
 
       socket.end();
-    } 
-    else if (path.startsWith("/files/")) {
+    }
+
+    // POST /files/{filename}
+    else if (method === "POST" && path.startsWith("/files/")) {
+      const filename = path.substring(7);
+      const filePath = pathModule.join(directory, filename);
+
+      const body = request.split("\r\n\r\n")[1];
+
+      fs.writeFile(filePath, body, (err) => {
+        if (err) {
+          socket.write("HTTP/1.1 500 Internal Server Error\r\n\r\n");
+        } else {
+          socket.write("HTTP/1.1 201 Created\r\n\r\n");
+        }
+
+        socket.end();
+      });
+
+      return;
+    }
+
+    // GET /files/{filename}
+    else if (method === "GET" && path.startsWith("/files/")) {
       const filename = path.substring(7);
       const filePath = pathModule.join(directory, filename);
 
@@ -77,6 +106,8 @@ const server = net.createServer((socket) => {
 
       return;
     }
+
+    // Unknown route
     else {
       socket.write("HTTP/1.1 404 Not Found\r\n\r\n");
       socket.end();
