@@ -13,6 +13,15 @@ if (args[0] === "--directory") {
 const server = net.createServer((socket) => {
   socket.on("data", (data) => {
     const request = data.toString();
+    const lines = request.split("\r\n");
+
+let acceptEncoding = "";
+
+for (const line of lines) {
+  if (line.startsWith("Accept-Encoding:")) {
+    acceptEncoding = line.split(":")[1].trim();
+  }
+}
 
     const method = request.split(" ")[0];
     const path = request.split(" ")[1];
@@ -23,20 +32,26 @@ const server = net.createServer((socket) => {
       socket.end();
     }
 
-    // GET /echo/{message}
-    else if (path.startsWith("/echo/")) {
-      const message = path.substring(6);
+// GET /echo/{message}
+else if (path.startsWith("/echo/")) {
+  const message = path.substring(6);
 
-      socket.write(
-        `HTTP/1.1 200 OK\r\n` +
-        `Content-Type: text/plain\r\n` +
-        `Content-Length: ${message.length}\r\n` +
-        `\r\n` +
-        message
-      );
+  let response =
+    `HTTP/1.1 200 OK\r\n` +
+    `Content-Type: text/plain\r\n`;
 
-      socket.end();
-    }
+  if (acceptEncoding === "gzip") {
+    response += `Content-Encoding: gzip\r\n`;
+  }
+
+  response +=
+    `Content-Length: ${message.length}\r\n` +
+    `\r\n` +
+    message;
+
+  socket.write(response);
+  socket.end();
+}
 
     // GET /user-agent
     else if (path === "/user-agent") {
